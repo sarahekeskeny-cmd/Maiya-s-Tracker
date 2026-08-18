@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maiya — Production Dashboard</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div>
+      <p class="eyebrow">Production Tracker</p>
+      <h1>Maiya's Dashboard</h1>
+    </div>
+    <div class="meta">
+      <div>Updated <span id="lastUpdated"></span></div>
+      <div class="save-pill"><span class="save-dot" id="saveDot"></span><span id="saveText">Synced</span></div>
+    </div>
+  </div>
+
+  <!-- Goal rings -->
+  <div class="rings" id="rings"></div>
+  <p class="hint" style="margin-top:-24px;margin-bottom:32px;">Lives, New Clients, and Premium auto-calculate from clients marked <b>In Force</b> below — you can still type over any number by hand at any time. Points has no client field, so it stays manual.</p>
+
+  <!-- Case Open -->
+  <div class="section" id="caseOpenTable">
+    <div class="section-head">
+      <h2>Case Open <span class="count"></span></h2>
+      <button class="btn btn-add" id="addCaseOpen">+ Add row</button>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr>
+          <th>Client name</th><th>Lives</th><th>New clients</th><th>Premium</th><th>AUM</th><th>Notes</th><th></th>
+        </tr></thead>
+        <tbody></tbody>
+        <tfoot></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- Applications Submitted -->
+  <div class="section" id="applicationsTable">
+    <div class="section-head">
+      <h2>Applications Submitted <span class="count"></span></h2>
+      <button class="btn btn-add" id="addApplication">+ Add row</button>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr>
+          <th>Client name</th><th>Lives</th><th>New clients</th><th>Premium</th><th>AUM</th><th>Notes</th><th></th>
+        </tr></thead>
+        <tbody></tbody>
+        <tfoot></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- Conversion & Projections -->
+  <div class="section">
+    <div class="section-head">
+      <h2>Conversion &amp; Projected Close</h2>
+    </div>
+    <div class="conv-grid">
+      <div class="conv-col">
+        <h3>Lives</h3>
+        <p class="conv-stage-label">Case Open → Submitted</p>
+        <div class="conv-row"><span>Case open</span><b id="conv-open-lives">0</b></div>
+        <div class="conv-row"><span>Applications submitted</span><b id="conv-applied-lives">0</b></div>
+        <div class="conv-row"><span>Conversion ratio</span><b id="conv-ratio-lives">0%</b></div>
+        <div class="conv-row override">
+          <span>Override rate %</span>
+          <input type="number" step="any" id="conv-override-lives" data-override="lives__open_to_submitted" placeholder="auto">
+        </div>
+        <div class="conv-projected">
+          <span class="val" id="conv-projected-lives">0</span>
+          <span class="lbl">Projected to close</span>
+        </div>
+        <hr class="conv-divider">
+        <p class="conv-stage-label">Submitted → Placed Business</p>
+        <div class="conv-row"><span>Applications submitted</span><b id="conv-applied2-lives">0</b></div>
+        <div class="conv-row"><span>Placed (In Force)</span><b id="conv-placed-lives">0</b></div>
+        <div class="conv-row"><span>Conversion ratio</span><b id="conv-ratio2-lives">0%</b></div>
+        <div class="conv-row override">
+          <span>Override rate %</span>
+          <input type="number" step="any" id="conv-override2-lives" data-override="lives__submitted_to_placed" placeholder="auto">
+        </div>
+        <div class="conv-projected placed">
+          <span class="val" id="conv-projected-placed-lives">0</span>
+          <span class="lbl">Projected placed (from open pipeline)</span>
+        </div>
+      </div>
+      <div class="conv-col">
+        <h3>New Clients</h3>
+        <p class="conv-stage-label">Case Open → Submitted</p>
+        <div class="conv-row"><span>Case open</span><b id="conv-open-new_clients">0</b></div>
+        <div class="conv-row"><span>Applications submitted</span><b id="conv-applied-new_clients">0</b></div>
+        <div class="conv-row"><span>Conversion ratio</span><b id="conv-ratio-new_clients">0%</b></div>
+        <div class="conv-row override">
+          <span>Override rate %</span>
+          <input type="number" step="any" id="conv-override-new_clients" data-override="new_clients__open_to_submitted" placeholder="auto">
+        </div>
+        <div class="conv-projected">
+          <span class="val" id="conv-projected-new_clients">0</span>
+          <span class="lbl">Projected to close</span>
+        </div>
+        <hr class="conv-divider">
+        <p class="conv-stage-label">Submitted → Placed Business</p>
+        <div class="conv-row"><span>Applications submitted</span><b id="conv-applied2-new_clients">0</b></div>
+        <div class="conv-row"><span>Placed (In Force)</span><b id="conv-placed-new_clients">0</b></div>
+        <div class="conv-row"><span>Conversion ratio</span><b id="conv-ratio2-new_clients">0%</b></div>
+        <div class="conv-row override">
+          <span>Override rate %</span>
+          <input type="number" step="any" id="conv-override2-new_clients" data-override="new_clients__submitted_to_placed" placeholder="auto">
+        </div>
+        <div class="conv-projected placed">
+          <span class="val" id="conv-projected-placed-new_clients">0</span>
+          <span class="lbl">Projected placed (from open pipeline)</span>
+        </div>
+      </div>
+      <div class="conv-col">
+        <h3>Premium</h3>
+        <p class="conv-stage-label">Case Open → Submitted</p>
+        <div class="conv-row"><span>Case open</span><b id="conv-open-premium">$0</b></div>
+        <div class="conv-row"><span>Applications submitted</span><b id="conv-applied-premium">$0</b></div>
+        <div class="conv-row"><span>Conversion ratio</span><b id="conv-ratio-premium">0%</b></div>
+        <div class="conv-row override">
+          <span>Override rate %</span>
+          <input type="number" step="any" id="conv-override-premium" data-override="premium__open_to_submitted" placeholder="auto">
+        </div>
+        <div class="conv-projected">
+          <span class="val" id="conv-projected-premium">$0</span>
+          <span class="lbl">Projected to close</span>
+        </div>
+        <hr class="conv-divider">
+        <p class="conv-stage-label">Submitted → Placed Business</p>
+        <div class="conv-row"><span>Applications submitted</span><b id="conv-applied2-premium">$0</b></div>
+        <div class="conv-row"><span>Placed (In Force)</span><b id="conv-placed-premium">$0</b></div>
+        <div class="conv-row"><span>Conversion ratio</span><b id="conv-ratio2-premium">0%</b></div>
+        <div class="conv-row override">
+          <span>Override rate %</span>
+          <input type="number" step="any" id="conv-override2-premium" data-override="premium__submitted_to_placed" placeholder="auto">
+        </div>
+        <div class="conv-projected placed">
+          <span class="val" id="conv-projected-placed-premium">$0</span>
+          <span class="lbl">Projected placed (from open pipeline)</span>
+        </div>
+      </div>
+    </div>
+    <p class="hint">Ratios auto-calculate from the tables above — Applications ÷ Case Open, and Placed (clients marked In Force) ÷ Applications Submitted. Type a number in any "Override rate %" to swap in your own assumption — leave it blank to use the auto ratio. "Projected placed" chains both stages, so it estimates how much of today's open pipeline should ultimately go In Force.</p>
+  </div>
+
+  <!-- Current Clients -->
+  <div class="section" id="clientsSection">
+    <div class="section-head">
+      <h2>Current Clients <span class="count" id="clientsCount"></span></h2>
+      <button class="btn btn-add" id="addClient">+ Add client</button>
+    </div>
+    <div class="source-manager" id="sourceManager"></div>
+    <div class="table-scroll">
+      <table id="clientsTableEl">
+        <thead><tr>
+          <th>Client name</th><th>Source</th><th>Lives</th><th>New clients</th>
+          <th>Premium</th><th>AUM</th><th>Status</th><th>Date added</th><th>Notes</th><th></th>
+        </tr></thead>
+        <tbody id="clientsTbody"></tbody>
+      </table>
+    </div>
+    <p class="hint">Moving a client's status to <b>In Force</b> automatically rolls their Lives, New Clients, and Premium into the goal circles above and into "Placed Business" in the conversion panel. Add your own Source options (e.g. a specific event name) with the button above the table.</p>
+  </div>
+
+  <!-- Hot List -->
+  <div class="section" id="hotListTable">
+    <div class="section-head">
+      <h2>Hot List <span class="count"></span></h2>
+      <button class="btn btn-add" id="addHotList">+ Add row</button>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr>
+          <th>Date opened</th><th>Client name</th><th>FF income</th><th>Action date</th>
+          <th>Lives</th><th>New clients</th><th>Premium</th><th>AUM</th><th>Notes</th><th></th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
