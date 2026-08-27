@@ -82,8 +82,9 @@ async function saveGoal(id) {
   if (!sb) return;
   setSaveState("saving");
   const g = goalsState[id];
+  const def = GOAL_DEFS.find((d) => d.id === id);
   const { error } = await sb.from("goals").upsert({
-    id, current_value: g.current_value, goal_value: g.goal_value, updated_at: new Date().toISOString(),
+    id, label: def ? def.label : id, current_value: g.current_value, goal_value: g.goal_value, updated_at: new Date().toISOString(),
   });
   setSaveState(error ? "error" : "idle");
 }
@@ -358,10 +359,14 @@ async function recalcFromClients() {
   renderConversion();
   if (sb) {
     setSaveState("saving");
-    const rows = ["lives", "new_clients", "premium"].map((key) => ({
-      id: key, current_value: goalsState[key].current_value, goal_value: goalsState[key].goal_value,
-      updated_at: new Date().toISOString(),
-    }));
+    const rows = ["lives", "new_clients", "premium"].map((key) => {
+      const def = GOAL_DEFS.find((d) => d.id === key);
+      return {
+        id: key, label: def ? def.label : key,
+        current_value: goalsState[key].current_value, goal_value: goalsState[key].goal_value,
+        updated_at: new Date().toISOString(),
+      };
+    });
     const { error } = await sb.from("goals").upsert(rows);
     setSaveState(error ? "error" : "idle");
   }
