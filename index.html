@@ -22,40 +22,32 @@
 
   <!-- Goal rings -->
   <div class="rings" id="rings"></div>
-  <p class="hint" style="margin-top:-24px;margin-bottom:32px;">Lives, New Clients, and Premium auto-calculate from clients marked <b>In Force</b> below — you can still type over any number by hand at any time. Points has no client field, so it stays manual.</p>
+  <p class="hint" style="margin-top:-24px;margin-bottom:32px;">Lives, New Clients, and Premium auto-calculate from clients marked <b>In Force</b> below — you can still type over any number by hand at any time. Premium now includes DI + Life + LTC. Points has no client field, so it stays manual.</p>
 
-  <!-- Case Open -->
-  <div class="section" id="caseOpenTable">
+  <!-- Pipeline Snapshot -->
+  <div class="section">
     <div class="section-head">
-      <h2>Case Open <span class="count"></span></h2>
-      <button class="btn btn-add" id="addCaseOpen">+ Add row</button>
+      <h2>Pipeline Snapshot</h2>
     </div>
-    <div class="table-scroll">
-      <table>
-        <thead><tr>
-          <th>Client name</th><th>Lives</th><th>New clients</th><th>Premium</th><th>AUM</th><th>Notes</th><th></th>
-        </tr></thead>
-        <tbody></tbody>
-        <tfoot></tfoot>
-      </table>
+    <div class="stat-card-row">
+      <div class="stat-card">
+        <p class="stat-card-title">Said "Yes"</p>
+        <div class="stat-card-numbers">
+          <div><span id="stat-said-yes-lives">0</span><label>Lives</label></div>
+          <div><span id="stat-said-yes-new_clients">0</span><label>New Clients</label></div>
+          <div><span id="stat-said-yes-premium">$0</span><label>Total Premium</label></div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <p class="stat-card-title">Submitted an App</p>
+        <div class="stat-card-numbers">
+          <div><span id="stat-submitted-app-lives">0</span><label>Lives</label></div>
+          <div><span id="stat-submitted-app-new_clients">0</span><label>New Clients</label></div>
+          <div><span id="stat-submitted-app-premium">$0</span><label>Total Premium</label></div>
+        </div>
+      </div>
     </div>
-  </div>
-
-  <!-- Applications Submitted -->
-  <div class="section" id="applicationsTable">
-    <div class="section-head">
-      <h2>Applications Submitted <span class="count"></span></h2>
-      <button class="btn btn-add" id="addApplication">+ Add row</button>
-    </div>
-    <div class="table-scroll">
-      <table>
-        <thead><tr>
-          <th>Client name</th><th>Lives</th><th>New clients</th><th>Premium</th><th>AUM</th><th>Notes</th><th></th>
-        </tr></thead>
-        <tbody></tbody>
-        <tfoot></tfoot>
-      </table>
-    </div>
+    <p class="hint">These totals update automatically based on each client's Status in the Current Clients table below.</p>
   </div>
 
   <!-- Conversion & Projections -->
@@ -66,8 +58,8 @@
     <div class="conv-grid">
       <div class="conv-col">
         <h3>Lives</h3>
-        <p class="conv-stage-label">Case Open → Submitted</p>
-        <div class="conv-row"><span>Case open</span><b id="conv-open-lives">0</b></div>
+        <p class="conv-stage-label">Said Yes → Submitted</p>
+        <div class="conv-row"><span>Said Yes</span><b id="conv-open-lives">0</b></div>
         <div class="conv-row"><span>Applications submitted</span><b id="conv-applied-lives">0</b></div>
         <div class="conv-row"><span>Conversion ratio</span><b id="conv-ratio-lives">0%</b></div>
         <div class="conv-row override">
@@ -94,8 +86,8 @@
       </div>
       <div class="conv-col">
         <h3>New Clients</h3>
-        <p class="conv-stage-label">Case Open → Submitted</p>
-        <div class="conv-row"><span>Case open</span><b id="conv-open-new_clients">0</b></div>
+        <p class="conv-stage-label">Said Yes → Submitted</p>
+        <div class="conv-row"><span>Said Yes</span><b id="conv-open-new_clients">0</b></div>
         <div class="conv-row"><span>Applications submitted</span><b id="conv-applied-new_clients">0</b></div>
         <div class="conv-row"><span>Conversion ratio</span><b id="conv-ratio-new_clients">0%</b></div>
         <div class="conv-row override">
@@ -122,8 +114,8 @@
       </div>
       <div class="conv-col">
         <h3>Premium</h3>
-        <p class="conv-stage-label">Case Open → Submitted</p>
-        <div class="conv-row"><span>Case open</span><b id="conv-open-premium">$0</b></div>
+        <p class="conv-stage-label">Said Yes → Submitted</p>
+        <div class="conv-row"><span>Said Yes</span><b id="conv-open-premium">$0</b></div>
         <div class="conv-row"><span>Applications submitted</span><b id="conv-applied-premium">$0</b></div>
         <div class="conv-row"><span>Conversion ratio</span><b id="conv-ratio-premium">0%</b></div>
         <div class="conv-row override">
@@ -149,7 +141,7 @@
         </div>
       </div>
     </div>
-    <p class="hint">Ratios auto-calculate from the tables above — Applications ÷ Case Open, and Placed (clients marked In Force) ÷ Applications Submitted. Type a number in any "Override rate %" to swap in your own assumption — leave it blank to use the auto ratio. "Projected placed" chains both stages, so it estimates how much of today's open pipeline should ultimately go In Force.</p>
+    <p class="hint">"Said Yes" is every client whose Status is set to <b>Said "Yes"</b>. "Applications submitted" is clients whose Status is set to <b>Submitted an App</b>. "Placed" is clients marked <b>In Force</b>. Type a number in any "Override rate %" to swap in your own assumption — leave it blank to use the auto ratio. "Projected placed" chains both stages, so it estimates how much of today's Said Yes pipeline should ultimately go In Force.</p>
   </div>
 
   <!-- Current Clients -->
@@ -162,19 +154,21 @@
     <div class="table-scroll">
       <table id="clientsTableEl">
         <thead><tr>
-          <th>Client name</th><th>Source</th><th>Lives</th><th>New clients</th>
-          <th>Premium</th><th>AUM</th><th>Status</th><th>Date added</th><th>Notes</th><th></th>
+          <th>Client name</th><th>Source</th><th>Joint work</th><th>Lives</th><th>New clients</th>
+          <th>DI premium</th><th>Life premium</th><th>LTC premium</th><th>AUM</th>
+          <th>Advisory accounts</th><th>Investments</th>
+          <th>Status</th><th>Date added</th><th>Notes</th><th></th>
         </tr></thead>
         <tbody id="clientsTbody"></tbody>
       </table>
     </div>
-    <p class="hint">Moving a client's status to <b>In Force</b> automatically rolls their Lives, New Clients, and Premium into the goal circles above and into "Placed Business" in the conversion panel. Add your own Source options (e.g. a specific event name) with the button above the table.</p>
+    <p class="hint">Moving a client's status to <b>In Force</b> automatically rolls their Lives, New Clients, DI Premium, and Life Premium into the goal circles above and into "Placed Business" in the conversion panel (LTC Premium isn't included in that total). Add your own Source, Advisory Account, or Investment options with the buttons above the table or inside each dropdown.</p>
   </div>
 
-  <!-- Hot List -->
+  <!-- Follow Ups -->
   <div class="section" id="hotListTable">
     <div class="section-head">
-      <h2>Hot List <span class="count"></span></h2>
+      <h2>Follow Ups <span class="count"></span></h2>
       <button class="btn btn-add" id="addHotList">+ Add row</button>
     </div>
     <div class="table-scroll">
