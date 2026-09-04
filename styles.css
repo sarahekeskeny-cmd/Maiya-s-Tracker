@@ -419,11 +419,33 @@ select.badge-select:focus { outline: 2px solid var(--gold-soft); }
 }
 .btn-add-source:hover { border-color: var(--teal-soft); }
 
+/* ---------- Drag-to-reorder ---------- */
+#clientsTableEl td.drag-cell {
+  width: 28px;
+  min-width: 28px;
+  text-align: center;
+  cursor: grab;
+  color: #B7BEB6;
+  font-size: 15px;
+  user-select: none;
+}
+#clientsTableEl td.drag-cell:active { cursor: grabbing; }
+#clientsTableEl tr.dragging { opacity: 0.4; }
+#clientsTableEl tr.drag-over-top { box-shadow: inset 0 2px 0 var(--gold); }
+#clientsTableEl tr.drag-over-bottom { box-shadow: inset 0 -2px 0 var(--gold); }
+
 /* ---------- Clients table specifics ---------- */
-#clientsTableEl { min-width: 1220px; }
+#clientsTableEl { min-width: 1450px; }
 #clientsTable td.status-cell,
 #clientsTable td.source-cell { min-width: 160px; }
 #clientsTableEl td.num { min-width: 90px; }
+#clientsTableEl td.notes-cell,
+#clientsTableEl th.notes-col { min-width: 320px; }
+#clientsTableEl td.notes-cell textarea {
+  min-height: 90px;
+  font-size: 14px;
+  line-height: 1.4;
+}
 .days-in-stage {
   font-size: 11px;
   color: #8A968F;
