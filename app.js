@@ -331,8 +331,13 @@ function renderStatCards() {
 }
 
 function renderConversion() {
-  const open = clientStatusSums('Said "Yes"'); // "Said Yes" is the start of the funnel — same as what used to be "Case Open"
-  const applied = clientStatusSums("Submitted an App");
+  // Each stage counts everyone who reached AT LEAST that point in the
+  // pipeline, not just clients sitting at that exact status today — so
+  // someone who has since moved to Waiting for Medical or In Force still
+  // counts toward "Said Yes" and "Submitted an App" totals. "Approved as
+  // Other" is a separate outcome and is excluded from this funnel entirely.
+  const open = clientStatusSumsAny(['Said "Yes"', "Submitted an App", "Waiting for Medical", "In Underwriting", "In Force"]);
+  const applied = clientStatusSumsAny(["Submitted an App", "Waiting for Medical", "In Underwriting", "In Force"]);
   const placed = placedSums();             // status === "In Force"
 
   ["lives", "new_clients", "premium"].forEach((key) => {
