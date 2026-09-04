@@ -424,7 +424,24 @@ async function recalcFromClients() {
 }
 
 // ---------- Source options (editable, color-coded) ----------
-const DEFAULT_SOURCE_COLORS = ["#0A66C2", "#C9A227", "#1F6F5C", "#C0432D", "#7C5CBF", "#3D8FB0"];
+// Shared palette + picker for any editable color-coded list (Source,
+// Advisory Accounts, Investments). Always returns a color not already in
+// use by that list, so deleting and re-adding options never causes a repeat
+// — and if the whole palette is ever exhausted, it generates a new distinct
+// color instead of wrapping back to the start.
+const COLOR_PALETTE = [
+  "#0A66C2", "#C9A227", "#1F6F5C", "#C0432D", "#7C5CBF", "#3D8FB0",
+  "#E08E45", "#5B8DEF", "#2E9E83", "#B5507C", "#6B8E23", "#8E6B4F",
+];
+function pickDistinctColor(existingList) {
+  const used = new Set(existingList.map((o) => o.color));
+  const free = COLOR_PALETTE.find((c) => !used.has(c));
+  if (free) return free;
+  const hue = (existingList.length * 137.508) % 360; // golden-angle rotation — stays visually distinct indefinitely
+  return `hsl(${hue.toFixed(0)}, 60%, 45%)`;
+}
+
+const DEFAULT_SOURCE_COLORS = COLOR_PALETTE;
 let sourceOptions = [
   { id: "linkedin", label: "LinkedIn", color: "#0A66C2" },
   { id: "event", label: "Event", color: "#C9A227" },
@@ -460,7 +477,7 @@ function renderSourceManager() {
     const label = prompt("New source name (e.g. an event name):");
     if (!label) return;
     const id = label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || ("src-" + Date.now());
-    const color = DEFAULT_SOURCE_COLORS[sourceOptions.length % DEFAULT_SOURCE_COLORS.length];
+    const color = pickDistinctColor(sourceOptions);
     sourceOptions.push({ id, label, color, sort_order: sourceOptions.length + 1 });
     renderSourceManager();
     clientsTable.render();
@@ -488,7 +505,6 @@ function renderSourceManager() {
 }
 
 // ---------- Multi-select option lists (Advisory Accounts / Investments) ----------
-const DEFAULT_MULTI_COLORS = ["#0A66C2", "#C9A227", "#1F6F5C", "#C0432D", "#7C5CBF", "#3D8FB0"];
 
 let advisoryOptions = [
   { id: "roth-ira", label: "Roth IRA", color: "#0A66C2" },
@@ -579,12 +595,13 @@ function makeClientsController() {
     tbody.innerHTML = "";
 
     if (rows.length === 0) {
-      tbody.innerHTML = `<tr class="empty-row"><td colspan="15">No clients yet — click "Add client" to start tracking.</td></tr>`;
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="16">No clients yet — click "Add client" to start tracking.</td></tr>`;
     }
 
     rows.forEach((row) => {
       const tr = document.createElement("tr");
       tr.dataset.id = row.id;
+      tr.draggable = true;
       const sourceOpts = sourceOptions.map((s) =>
         `<option value="${escapeAttr(s.label)}" ${row.source === s.label ? "selected" : ""}>${escapeHtml(s.label)}</option>`
       ).join("");
@@ -593,24 +610,25 @@ function makeClientsController() {
       ).join("");
 
       tr.innerHTML = `
+        <td class="drag-cell" title="Drag to reorder">⠿</td>
+        <td><input type="date" data-key="date_added" value="${escapeAttr(row.date_added || "")}"></td>
         <td><input type="text" data-key="client_name" value="${escapeAttr(row.client_name)}" placeholder="Client name"></td>
+        <td><input type="text" data-key="joint_work" value="${escapeAttr(row.joint_work)}" placeholder="Joint work with"></td>
         <td class="source-cell"><div class="badge-select-wrap"><select class="badge-select" data-key="source" style="background-color:${sourceColor(row.source)}">
           <option value="" ${!row.source ? "selected" : ""}>—</option>${sourceOpts}
         </select></div></td>
-        <td><input type="text" data-key="joint_work" value="${escapeAttr(row.joint_work)}" placeholder="Joint work with"></td>
+        <td class="status-cell"><div class="badge-select-wrap"><select class="badge-select" data-key="status" style="background-color:${statusColor(row.status)}">
+          ${statusOpts}
+        </select></div></td>
+        <td class="notes-cell"><textarea data-key="notes" placeholder="Notes">${escapeHtml(row.notes)}</textarea></td>
         <td class="num"><input type="number" step="any" data-key="lives" value="${escapeAttr(row.lives)}"></td>
         <td class="num"><input type="number" step="any" data-key="new_clients" value="${escapeAttr(row.new_clients)}"></td>
-        <td class="num"><input type="number" step="any" data-key="di_premium" value="${escapeAttr(row.di_premium)}"></td>
         <td class="num"><input type="number" step="any" data-key="life_premium" value="${escapeAttr(row.life_premium)}"></td>
+        <td class="num"><input type="number" step="any" data-key="di_premium" value="${escapeAttr(row.di_premium)}"></td>
         <td class="num"><input type="number" step="any" data-key="ltc_premium" value="${escapeAttr(row.ltc_premium)}"></td>
         <td class="num"><input type="number" step="any" data-key="aum" value="${escapeAttr(row.aum)}"></td>
         <td class="multi-cell">${renderMultiCell(advisoryOptions, row.advisory_accounts, "advisory_accounts", row.id, "advisory_account_options")}</td>
         <td class="multi-cell">${renderMultiCell(investmentOptions, row.investments, "investments", row.id, "investment_options")}</td>
-        <td class="status-cell"><div class="badge-select-wrap"><select class="badge-select" data-key="status" style="background-color:${statusColor(row.status)}">
-          ${statusOpts}
-        </select></div></td>
-        <td><input type="date" data-key="date_added" value="${escapeAttr(row.date_added || "")}"></td>
-        <td><textarea data-key="notes" placeholder="Notes">${escapeHtml(row.notes)}</textarea></td>
         <td class="rowdel"><button class="icon-del" title="Delete client" data-del="${row.id}">✕</button></td>
       `;
       tbody.appendChild(tr);
@@ -673,7 +691,7 @@ function makeClientsController() {
         if (!label) return;
         const optId = label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || ("opt-" + Date.now());
         const list = key === "advisory_accounts" ? advisoryOptions : investmentOptions;
-        const color = DEFAULT_MULTI_COLORS[list.length % DEFAULT_MULTI_COLORS.length];
+        const color = pickDistinctColor(list);
         list.push({ id: optId, label, color, sort_order: list.length + 1 });
         // auto-select the new option for this row
         const row = rows.find((r) => r.id === id);
@@ -706,6 +724,57 @@ function makeClientsController() {
         }
       });
     });
+
+    // Drag-and-drop reordering
+    let draggedId = null;
+    tbody.querySelectorAll("tr[data-id]").forEach((tr) => {
+      tr.addEventListener("dragstart", (e) => {
+        draggedId = tr.dataset.id;
+        tr.classList.add("dragging");
+        e.dataTransfer.effectAllowed = "move";
+      });
+      tr.addEventListener("dragend", () => {
+        tr.classList.remove("dragging");
+        tbody.querySelectorAll("tr").forEach((r) => r.classList.remove("drag-over-top", "drag-over-bottom"));
+      });
+      tr.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        if (!draggedId || tr.dataset.id === draggedId) return;
+        const rect = tr.getBoundingClientRect();
+        const before = (e.clientY - rect.top) < rect.height / 2;
+        tr.classList.toggle("drag-over-top", before);
+        tr.classList.toggle("drag-over-bottom", !before);
+      });
+      tr.addEventListener("dragleave", () => {
+        tr.classList.remove("drag-over-top", "drag-over-bottom");
+      });
+      tr.addEventListener("drop", async (e) => {
+        e.preventDefault();
+        const targetId = tr.dataset.id;
+        const before = tr.classList.contains("drag-over-top");
+        tr.classList.remove("drag-over-top", "drag-over-bottom");
+        if (!draggedId || draggedId === targetId) return;
+        const fromIdx = rows.findIndex((r) => r.id === draggedId);
+        let toIdx = rows.findIndex((r) => r.id === targetId);
+        if (fromIdx === -1 || toIdx === -1) return;
+        const [moved] = rows.splice(fromIdx, 1);
+        toIdx = rows.findIndex((r) => r.id === targetId); // recompute after removal
+        rows.splice(before ? toIdx : toIdx + 1, 0, moved);
+        render();
+        await persistOrder();
+      });
+    });
+  }
+
+  async function persistOrder() {
+    rows.forEach((row, i) => { row.sort_order = i; });
+    if (!sb) return;
+    setSaveState("saving");
+    const results = await Promise.all(
+      rows.map((row, i) => sb.from("clients").update({ sort_order: i }).eq("id", row.id))
+    );
+    const hadError = results.some((r) => r.error);
+    setSaveState(hadError ? "error" : "idle");
   }
 
   async function saveClientRow(id) {
@@ -737,11 +806,13 @@ function makeClientsController() {
   async function addClient() {
     const id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : "id-" + Date.now() + Math.random();
     const today = new Date().toISOString().slice(0, 10);
+    const nextOrder = rows.length ? Math.max(...rows.map((r) => r.sort_order || 0)) + 1 : 0;
     const blank = {
       id, client_name: "", source: "", joint_work: "", lives: 1, new_clients: 1,
       di_premium: 0, life_premium: 0, ltc_premium: 0, aum: 0,
       advisory_accounts: [], investments: [],
       status: "Fact Finder Complete", notes: "", date_added: today,
+      sort_order: nextOrder,
     };
     rows.push(blank);
     render();
@@ -754,7 +825,7 @@ function makeClientsController() {
 
   async function load() {
     if (!sb) { render(); return; }
-    const { data, error } = await sb.from("clients").select("*").order("created_at", { ascending: true });
+    const { data, error } = await sb.from("clients").select("*").order("sort_order", { ascending: true, nullsFirst: false });
     if (!error && data) rows = data;
     render();
   }
