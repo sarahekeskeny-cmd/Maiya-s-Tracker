@@ -429,6 +429,134 @@ select.badge-select:focus { outline: 2px solid var(--gold-soft); }
   color: #8A968F;
 }
 
+/* ---------- Multi-select picker (Advisory Accounts / Investments) ---------- */
+#clientsTableEl td.multi-cell { min-width: 190px; }
+.multi-picker { position: relative; }
+.multi-picker summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-height: 28px;
+  align-items: center;
+  padding: 4px 6px;
+  border-radius: 8px;
+  border: 1px dashed var(--panel-line);
+}
+.multi-picker summary::-webkit-details-marker { display: none; }
+.multi-picker summary:hover { background: #F2F1EA; }
+.multi-picker[open] summary { border-color: var(--gold); }
+.multi-tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  border-radius: 999px;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+.multi-placeholder { font-size: 12px; color: #B7BEB6; }
+.multi-panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  background: #fff;
+  border: 1px solid var(--panel-line);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  padding: 10px;
+  min-width: 200px;
+}
+.multi-panel label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  padding: 5px 4px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.multi-panel label:hover { background: #FAFAF6; }
+.multi-panel input[type="checkbox"] { accent-color: var(--teal-soft); }
+.multi-panel-add {
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--panel-line);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--teal-soft);
+  background: none;
+  border-left: none; border-right: none; border-bottom: none;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+}
+.multi-panel-add:hover { color: var(--gold); }
+
+/* ---------- Premium sub-totals under the ring ---------- */
+.premium-subtotals {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: #6B7A73;
+  flex-wrap: wrap;
+}
+.premium-subtotals .swatch {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+.premium-subtotals b { color: var(--ink); font-family: 'Fraunces', serif; }
+
+/* ---------- Pipeline snapshot stat cards ---------- */
+.stat-card-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  padding: 18px 22px 4px;
+}
+.stat-card {
+  background: #FAFAF6;
+  border: 1px solid var(--panel-line);
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+.stat-card-title {
+  font-family: 'Fraunces', serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--teal);
+  margin: 0 0 12px;
+}
+.stat-card-numbers {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+.stat-card-numbers > div { text-align: center; flex: 1; }
+.stat-card-numbers span {
+  display: block;
+  font-family: 'Fraunces', serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.stat-card-numbers label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #8A968F;
+}
+@media (max-width: 640px) {
+  .stat-card-row { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 860px) {
   .rings { grid-template-columns: repeat(2, 1fr); }
   .conv-grid { grid-template-columns: 1fr; }
