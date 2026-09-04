@@ -612,7 +612,7 @@ function makeClientsController() {
       tr.innerHTML = `
         <td class="drag-cell" title="Drag to reorder">⠿</td>
         <td><input type="date" data-key="date_added" value="${escapeAttr(row.date_added || "")}"></td>
-        <td><input type="text" data-key="client_name" value="${escapeAttr(row.client_name)}" placeholder="Client name"></td>
+        <td class="name-cell"><input type="text" data-key="client_name" value="${escapeAttr(row.client_name)}" placeholder="Client name"></td>
         <td><input type="text" data-key="joint_work" value="${escapeAttr(row.joint_work)}" placeholder="Joint work with"></td>
         <td class="source-cell"><div class="badge-select-wrap"><select class="badge-select" data-key="source" style="background-color:${sourceColor(row.source)}">
           <option value="" ${!row.source ? "selected" : ""}>—</option>${sourceOpts}
