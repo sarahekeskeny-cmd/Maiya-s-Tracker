@@ -310,9 +310,18 @@ function renderPremiumSubtotals() {
   `;
 }
 
+// Sums clients across several statuses at once — used for the "Submitted an
+// App" stat card, which should include anyone who's gotten at least that far
+// (Submitted an App, Waiting for Medical, In Underwriting) even if they've
+// since moved further along, right up until In Force or Approved as Other.
+function clientStatusSumsAny(statuses) {
+  const rows = clientsTable ? clientsTable.getRows().filter((r) => statuses.includes(r.status)) : [];
+  return sumClientRows(rows);
+}
+
 function renderStatCards() {
   const yes = clientStatusSums('Said "Yes"');
-  const app = clientStatusSums("Submitted an App");
+  const app = clientStatusSumsAny(["Submitted an App", "Waiting for Medical", "In Underwriting"]);
   setText("stat-said-yes-lives", Math.round(yes.lives).toLocaleString());
   setText("stat-said-yes-new_clients", Math.round(yes.new_clients).toLocaleString());
   setText("stat-said-yes-premium", "$" + Math.round(yes.premium).toLocaleString());
@@ -529,6 +538,15 @@ function reopenPicker(rowId, key) {
   const details = document.querySelector(`details.multi-picker[data-row="${rowId}"][data-key="${key}"]`);
   if (details) details.open = true;
 }
+
+// Close any open multi-select picker when clicking outside it. Uses
+// mousedown (fires before our click handlers re-render the row) so the
+// element references here are still attached to the DOM and accurate.
+document.addEventListener("mousedown", (e) => {
+  document.querySelectorAll("details.multi-picker[open]").forEach((d) => {
+    if (!d.contains(e.target)) d.open = false;
+  });
+});
 
 // ---------- Status stages (fixed pipeline, color-coded) ----------
 const STATUS_STAGES = [
