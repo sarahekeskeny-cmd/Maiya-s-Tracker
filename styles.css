@@ -435,17 +435,19 @@ select.badge-select:focus { outline: 2px solid var(--gold-soft); }
 #clientsTableEl tr.drag-over-bottom { box-shadow: inset 0 -2px 0 var(--gold); }
 
 /* ---------- Clients table specifics ---------- */
-#clientsTableEl { min-width: 1450px; }
+#clientsTableEl { min-width: 1350px; }
 #clientsTable td.status-cell,
 #clientsTable td.source-cell { min-width: 160px; }
 #clientsTableEl td.num { min-width: 90px; }
 #clientsTableEl td.notes-cell,
-#clientsTableEl th.notes-col { min-width: 320px; }
+#clientsTableEl th.notes-col { min-width: 160px; }
 #clientsTableEl td.notes-cell textarea {
-  min-height: 90px;
-  font-size: 14px;
+  min-height: 34px;
+  font-size: 13px;
   line-height: 1.4;
 }
+#clientsTableEl td.name-cell,
+#clientsTableEl th.name-col { min-width: 220px; }
 .days-in-stage {
   font-size: 11px;
   color: #8A968F;
