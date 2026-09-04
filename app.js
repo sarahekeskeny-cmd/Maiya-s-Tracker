@@ -41,17 +41,47 @@ function renderRings() {
     const pct = g.goal_value > 0 ? Math.min(g.current_value / g.goal_value, 1) : 0;
     const r = 54;
     const circumference = 2 * Math.PI * r;
-    const offset = circumference * (1 - pct);
     const complete = pct >= 1;
+
+    let arcSvg;
+    if (def.id === "premium") {
+      // 3-segment arc: DI, Life, LTC — each sized by its share of the total,
+      // scaled so the combined arc still represents current/goal overall.
+      const placed = placedSums();
+      const total = placed.di_premium + placed.life_premium + placed.ltc_premium;
+      const propDI = total > 0 ? placed.di_premium / total : 0;
+      const propLife = total > 0 ? placed.life_premium / total : 0;
+      const propLTC = total > 0 ? placed.ltc_premium / total : 0;
+      const lenDI = pct * propDI * circumference;
+      const lenLife = pct * propLife * circumference;
+      const lenLTC = pct * propLTC * circumference;
+      arcSvg = `
+        <circle class="ring-track" cx="64" cy="64" r="${r}"></circle>
+        <circle cx="64" cy="64" r="${r}" fill="none" stroke="#1F6F5C" stroke-width="10" stroke-linecap="round"
+          transform="rotate(-90 64 64)"
+          stroke-dasharray="${lenDI} ${circumference - lenDI}" stroke-dashoffset="0"></circle>
+        <circle cx="64" cy="64" r="${r}" fill="none" stroke="#C9A227" stroke-width="10" stroke-linecap="round"
+          transform="rotate(-90 64 64)"
+          stroke-dasharray="${lenLife} ${circumference - lenLife}" stroke-dashoffset="${-lenDI}"></circle>
+        <circle cx="64" cy="64" r="${r}" fill="none" stroke="#C0432D" stroke-width="10" stroke-linecap="round"
+          transform="rotate(-90 64 64)"
+          stroke-dasharray="${lenLTC} ${circumference - lenLTC}" stroke-dashoffset="${-(lenDI + lenLife)}"></circle>
+      `;
+    } else {
+      const offset = circumference * (1 - pct);
+      arcSvg = `
+        <circle class="ring-track" cx="64" cy="64" r="${r}"></circle>
+        <circle class="ring-progress${complete ? " complete" : ""}" cx="64" cy="64" r="${r}"
+          stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"></circle>
+      `;
+    }
 
     const card = document.createElement("div");
     card.className = "ring-card";
     card.innerHTML = `
       <div class="ring-label">${def.label}</div>
       <svg class="ring-svg" viewBox="0 0 128 128">
-        <circle class="ring-track" cx="64" cy="64" r="${r}"></circle>
-        <circle class="ring-progress${complete ? " complete" : ""}" cx="64" cy="64" r="${r}"
-          stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"></circle>
+        ${arcSvg}
         <text x="64" y="60" text-anchor="middle" class="ring-center" fill="var(--ink)"
           font-family="Fraunces, serif" font-size="20" font-weight="600">${Math.round(pct * 100)}%</text>
         <text x="64" y="76" text-anchor="middle" class="ring-center-sub" fill="#8A968F" font-size="10">OF GOAL</text>
@@ -61,9 +91,12 @@ function renderRings() {
         <span>/</span>
         <input type="number" step="any" value="${g.goal_value}" data-goal="${def.id}" data-field="goal_value" aria-label="${def.label} goal">
       </div>
+      ${def.id === "premium" ? `<div class="premium-subtotals" id="premiumSubtotals"></div>` : ""}
     `;
     container.appendChild(card);
   });
+
+  renderPremiumSubtotals();
 
   container.querySelectorAll("input").forEach((input) => {
     input.addEventListener("change", async (e) => {
@@ -217,38 +250,6 @@ function escapeHtml(v) { return String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&
 function escapeAttr(v) { return escapeHtml(v); }
 
 // ---------- Table configs ----------
-const caseOpenTable = makeTableController({
-  tableName: "case_open",
-  containerId: "caseOpenTable",
-  addBtnId: "addCaseOpen",
-  totals: ["lives", "new_clients", "premium", "aum"],
-  onChange: () => renderConversion(),
-  columns: [
-    { key: "client_name", label: "Client name" },
-    { key: "lives", label: "Lives", type: "number", numeric: true },
-    { key: "new_clients", label: "New clients", type: "number", numeric: true },
-    { key: "premium", label: "Premium", type: "number", numeric: true },
-    { key: "aum", label: "AUM", type: "number", numeric: true },
-    { key: "notes", label: "Notes", type: "textarea" },
-  ],
-});
-
-const applicationsTable = makeTableController({
-  tableName: "applications_submitted",
-  containerId: "applicationsTable",
-  addBtnId: "addApplication",
-  totals: ["lives", "new_clients", "premium", "aum"],
-  onChange: () => renderConversion(),
-  columns: [
-    { key: "client_name", label: "Client name" },
-    { key: "lives", label: "Lives", type: "number", numeric: true },
-    { key: "new_clients", label: "New clients", type: "number", numeric: true },
-    { key: "premium", label: "Premium", type: "number", numeric: true },
-    { key: "aum", label: "AUM", type: "number", numeric: true },
-    { key: "notes", label: "Notes", type: "textarea" },
-  ],
-});
-
 const hotListTable = makeTableController({
   tableName: "hot_list",
   containerId: "hotListTable",
@@ -275,27 +276,62 @@ let overrides = {}; // e.g. 'lives__open_to_submitted' -> number|null
 
 function sumBy(rows, key) { return rows.reduce((s, r) => s + (parseFloat(r[key]) || 0), 0); }
 
-function placedSums() {
-  const placedRows = clientsTable ? clientsTable.getRows().filter((r) => r.status === "In Force") : [];
+// Sums Lives/New Clients/DI/Life/LTC/AUM for a set of client rows, plus a
+// combined "premium" = DI + Life + LTC (used everywhere premium totals show).
+function sumClientRows(rows) {
+  const diSum = sumBy(rows, "di_premium");
+  const lifeSum = sumBy(rows, "life_premium");
+  const ltcSum = sumBy(rows, "ltc_premium");
   return {
-    lives: sumBy(placedRows, "lives"),
-    new_clients: sumBy(placedRows, "new_clients"),
-    premium: sumBy(placedRows, "premium"),
-    aum: sumBy(placedRows, "aum"),
+    lives: sumBy(rows, "lives"),
+    new_clients: sumBy(rows, "new_clients"),
+    di_premium: diSum,
+    life_premium: lifeSum,
+    ltc_premium: ltcSum,
+    premium: diSum + lifeSum + ltcSum,
+    aum: sumBy(rows, "aum"),
   };
 }
 
+function clientStatusSums(status) {
+  const rows = clientsTable ? clientsTable.getRows().filter((r) => r.status === status) : [];
+  return sumClientRows(rows);
+}
+function placedSums() { return clientStatusSums("In Force"); }
+
+function renderPremiumSubtotals() {
+  const el = document.getElementById("premiumSubtotals");
+  if (!el) return;
+  const p = placedSums();
+  el.innerHTML = `
+    <span><span class="swatch" style="background:#1F6F5C"></span>DI: <b>$${Math.round(p.di_premium).toLocaleString()}</b></span>
+    <span><span class="swatch" style="background:#C9A227"></span>Life: <b>$${Math.round(p.life_premium).toLocaleString()}</b></span>
+    <span><span class="swatch" style="background:#C0432D"></span>LTC: <b>$${Math.round(p.ltc_premium).toLocaleString()}</b></span>
+  `;
+}
+
+function renderStatCards() {
+  const yes = clientStatusSums('Said "Yes"');
+  const app = clientStatusSums("Submitted an App");
+  setText("stat-said-yes-lives", Math.round(yes.lives).toLocaleString());
+  setText("stat-said-yes-new_clients", Math.round(yes.new_clients).toLocaleString());
+  setText("stat-said-yes-premium", "$" + Math.round(yes.premium).toLocaleString());
+  setText("stat-submitted-app-lives", Math.round(app.lives).toLocaleString());
+  setText("stat-submitted-app-new_clients", Math.round(app.new_clients).toLocaleString());
+  setText("stat-submitted-app-premium", "$" + Math.round(app.premium).toLocaleString());
+}
+
 function renderConversion() {
-  const open = caseOpenTable.getRows();
-  const applied = applicationsTable.getRows();
-  const placed = placedSums();
+  const open = clientStatusSums('Said "Yes"'); // "Said Yes" is the start of the funnel — same as what used to be "Case Open"
+  const applied = clientStatusSums("Submitted an App");
+  const placed = placedSums();             // status === "In Force"
 
   ["lives", "new_clients", "premium"].forEach((key) => {
-    const openSum = sumBy(open, key);
-    const appliedSum = sumBy(applied, key);
+    const openSum = open[key];
+    const appliedSum = applied[key];
     const placedSum = placed[key];
 
-    // Stage 1: Case Open -> Submitted
+    // Stage 1: Said Yes -> Submitted
     const autoRatio1 = openSum > 0 ? appliedSum / openSum : 0;
     const ov1 = overrides[`${key}__open_to_submitted`];
     const ratio1 = ov1 != null ? ov1 / 100 : autoRatio1;
@@ -357,6 +393,7 @@ async function recalcFromClients() {
   });
   renderRings();
   renderConversion();
+  renderStatCards();
   if (sb) {
     setSaveState("saving");
     const rows = ["lives", "new_clients", "premium"].map((key) => {
@@ -436,6 +473,63 @@ function renderSourceManager() {
   });
 }
 
+// ---------- Multi-select option lists (Advisory Accounts / Investments) ----------
+const DEFAULT_MULTI_COLORS = ["#0A66C2", "#C9A227", "#1F6F5C", "#C0432D", "#7C5CBF", "#3D8FB0"];
+
+let advisoryOptions = [
+  { id: "roth-ira", label: "Roth IRA", color: "#0A66C2" },
+  { id: "trad-ira", label: "Traditional IRA", color: "#C9A227" },
+  { id: "brokerage", label: "Brokerage", color: "#1F6F5C" },
+];
+let investmentOptions = [
+  { id: "mutual-funds", label: "Mutual Funds", color: "#7C5CBF" },
+  { id: "stocks", label: "Stocks", color: "#3D8FB0" },
+  { id: "bonds", label: "Bonds", color: "#C0432D" },
+  { id: "annuities", label: "Annuities", color: "#C9A227" },
+];
+
+async function loadMultiOptions() {
+  if (!sb) return;
+  const { data: adv } = await sb.from("advisory_account_options").select("*").order("sort_order", { ascending: true });
+  if (adv && adv.length) advisoryOptions = adv;
+  const { data: inv } = await sb.from("investment_options").select("*").order("sort_order", { ascending: true });
+  if (inv && inv.length) investmentOptions = inv;
+}
+
+function multiColor(list, label) {
+  const found = list.find((o) => o.label === label);
+  return found ? found.color : "#8A968F";
+}
+
+// Renders a <details>-based multi-select cell. `list` is the current option
+// array (advisoryOptions or investmentOptions), `selected` is the row's
+// current array of labels, `tableName` is the Supabase table for new options.
+function renderMultiCell(list, selected, key, rowId, tableName) {
+  const tags = (selected || []).map((label) =>
+    `<span class="multi-tag" style="background:${multiColor(list, label)}">${escapeHtml(label)}</span>`
+  ).join("");
+  const checkboxes = list.map((o) => `
+    <label>
+      <input type="checkbox" data-multi-key="${key}" data-multi-value="${escapeAttr(o.label)}" ${(selected || []).includes(o.label) ? "checked" : ""}>
+      ${escapeHtml(o.label)}
+    </label>
+  `).join("");
+  return `
+    <details class="multi-picker" data-row="${rowId}" data-key="${key}" data-table="${tableName}">
+      <summary>${tags || `<span class="multi-placeholder">— select —</span>`}</summary>
+      <div class="multi-panel">
+        ${checkboxes}
+        <button type="button" class="multi-panel-add" data-multi-add="${key}">+ Add option</button>
+      </div>
+    </details>
+  `;
+}
+
+function reopenPicker(rowId, key) {
+  const details = document.querySelector(`details.multi-picker[data-row="${rowId}"][data-key="${key}"]`);
+  if (details) details.open = true;
+}
+
 // ---------- Status stages (fixed pipeline, color-coded) ----------
 const STATUS_STAGES = [
   { id: "Fact Finder Complete", color: "#8A968F" },
@@ -444,6 +538,7 @@ const STATUS_STAGES = [
   { id: "Waiting for Medical", color: "#E08E45" },
   { id: "In Underwriting", color: "#1F6F5C" },
   { id: "In Force", color: "#16413B" },
+  { id: "Approved as Other", color: "#7C5CBF" },
 ];
 function statusColor(status) {
   const found = STATUS_STAGES.find((s) => s.id === status);
@@ -461,7 +556,7 @@ function makeClientsController() {
     tbody.innerHTML = "";
 
     if (rows.length === 0) {
-      tbody.innerHTML = `<tr class="empty-row"><td colspan="10">No clients yet — click "Add client" to start tracking.</td></tr>`;
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="15">No clients yet — click "Add client" to start tracking.</td></tr>`;
     }
 
     rows.forEach((row) => {
@@ -479,10 +574,15 @@ function makeClientsController() {
         <td class="source-cell"><div class="badge-select-wrap"><select class="badge-select" data-key="source" style="background-color:${sourceColor(row.source)}">
           <option value="" ${!row.source ? "selected" : ""}>—</option>${sourceOpts}
         </select></div></td>
+        <td><input type="text" data-key="joint_work" value="${escapeAttr(row.joint_work)}" placeholder="Joint work with"></td>
         <td class="num"><input type="number" step="any" data-key="lives" value="${escapeAttr(row.lives)}"></td>
         <td class="num"><input type="number" step="any" data-key="new_clients" value="${escapeAttr(row.new_clients)}"></td>
-        <td class="num"><input type="number" step="any" data-key="premium" value="${escapeAttr(row.premium)}"></td>
+        <td class="num"><input type="number" step="any" data-key="di_premium" value="${escapeAttr(row.di_premium)}"></td>
+        <td class="num"><input type="number" step="any" data-key="life_premium" value="${escapeAttr(row.life_premium)}"></td>
+        <td class="num"><input type="number" step="any" data-key="ltc_premium" value="${escapeAttr(row.ltc_premium)}"></td>
         <td class="num"><input type="number" step="any" data-key="aum" value="${escapeAttr(row.aum)}"></td>
+        <td class="multi-cell">${renderMultiCell(advisoryOptions, row.advisory_accounts, "advisory_accounts", row.id, "advisory_account_options")}</td>
+        <td class="multi-cell">${renderMultiCell(investmentOptions, row.investments, "investments", row.id, "investment_options")}</td>
         <td class="status-cell"><div class="badge-select-wrap"><select class="badge-select" data-key="status" style="background-color:${statusColor(row.status)}">
           ${statusOpts}
         </select></div></td>
@@ -517,8 +617,57 @@ function makeClientsController() {
         if (!row) return;
         row[key] = e.target.value;
         await saveClientRow(id);
-        if (["lives", "new_clients", "premium"].includes(key)) await recalcFromClients();
+        if (["lives", "new_clients", "di_premium", "life_premium"].includes(key)) await recalcFromClients();
       }, 500));
+    });
+
+    // Multi-select checkboxes (Advisory Accounts / Investments)
+    tbody.querySelectorAll("input[data-multi-key]").forEach((el) => {
+      el.addEventListener("change", async (e) => {
+        const details = e.target.closest("details");
+        const id = details.dataset.row;
+        const key = details.dataset.key;
+        const value = e.target.dataset.multiValue;
+        const row = rows.find((r) => r.id === id);
+        if (!row) return;
+        const current = new Set(row[key] || []);
+        if (e.target.checked) current.add(value); else current.delete(value);
+        row[key] = Array.from(current);
+        render();
+        reopenPicker(id, key);
+        await saveClientRow(id);
+      });
+    });
+
+    // "+ Add option" inside a multi-select picker
+    tbody.querySelectorAll("[data-multi-add]").forEach((btn) => {
+      btn.addEventListener("click", async (e) => {
+        const details = e.target.closest("details");
+        const id = details.dataset.row;
+        const key = details.dataset.key;
+        const tableName = details.dataset.table;
+        const label = prompt("New option name:");
+        if (!label) return;
+        const optId = label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || ("opt-" + Date.now());
+        const list = key === "advisory_accounts" ? advisoryOptions : investmentOptions;
+        const color = DEFAULT_MULTI_COLORS[list.length % DEFAULT_MULTI_COLORS.length];
+        list.push({ id: optId, label, color, sort_order: list.length + 1 });
+        // auto-select the new option for this row
+        const row = rows.find((r) => r.id === id);
+        if (row) {
+          const current = new Set(row[key] || []);
+          current.add(label);
+          row[key] = Array.from(current);
+        }
+        render();
+        reopenPicker(id, key);
+        await saveClientRow(id);
+        if (sb) {
+          setSaveState("saving");
+          const { error } = await sb.from(tableName).upsert({ id: optId, label, color, sort_order: list.length });
+          setSaveState(error ? "error" : "idle");
+        }
+      });
     });
 
     tbody.querySelectorAll("[data-del]").forEach((btn) => {
@@ -544,10 +693,15 @@ function makeClientsController() {
       id,
       client_name: row.client_name || "",
       source: row.source || "",
+      joint_work: row.joint_work || "",
       lives: parseFloat(row.lives) || 0,
       new_clients: parseFloat(row.new_clients) || 0,
-      premium: parseFloat(row.premium) || 0,
+      di_premium: parseFloat(row.di_premium) || 0,
+      life_premium: parseFloat(row.life_premium) || 0,
+      ltc_premium: parseFloat(row.ltc_premium) || 0,
       aum: parseFloat(row.aum) || 0,
+      advisory_accounts: row.advisory_accounts || [],
+      investments: row.investments || [],
       status: row.status || "Fact Finder Complete",
       notes: row.notes || "",
       date_added: row.date_added || null,
@@ -560,17 +714,17 @@ function makeClientsController() {
   async function addClient() {
     const id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : "id-" + Date.now() + Math.random();
     const today = new Date().toISOString().slice(0, 10);
-    rows.push({
-      id, client_name: "", source: "", lives: 1, new_clients: 1, premium: 0, aum: 0,
+    const blank = {
+      id, client_name: "", source: "", joint_work: "", lives: 1, new_clients: 1,
+      di_premium: 0, life_premium: 0, ltc_premium: 0, aum: 0,
+      advisory_accounts: [], investments: [],
       status: "Fact Finder Complete", notes: "", date_added: today,
-    });
+    };
+    rows.push(blank);
     render();
     if (sb) {
       setSaveState("saving");
-      const { error } = await sb.from("clients").insert({
-        id, client_name: "", source: "", lives: 1, new_clients: 1, premium: 0, aum: 0,
-        status: "Fact Finder Complete", notes: "", date_added: today,
-      });
+      const { error } = await sb.from("clients").insert(blank);
       setSaveState(error ? "error" : "idle");
     }
   }
@@ -615,13 +769,12 @@ async function init() {
   });
 
   renderRings();
-  await caseOpenTable.load();
-  await applicationsTable.load();
   await hotListTable.load();
   await loadSourceOptions();
+  await loadMultiOptions();
   clientsTable = makeClientsController();
   await clientsTable.load();
-  await recalcFromClients(); // sets Lives/New Clients/Premium current values from any In Force clients
+  await recalcFromClients(); // sets Lives/New Clients/Premium, stat cards, and conversion panel from Current Clients
   renderConversion();
   setSaveState(sb ? "idle" : "error");
   if (!sb) saveText.textContent = "Not connected — add your Supabase details in config.js";
