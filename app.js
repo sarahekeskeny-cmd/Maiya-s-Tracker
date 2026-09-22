@@ -28,7 +28,7 @@ const GOAL_DEFS = [
   { id: "lives", label: "Lives", format: (v) => Math.round(v).toLocaleString() },
   { id: "new_clients", label: "New Clients", format: (v) => Math.round(v).toLocaleString() },
   { id: "premium", label: "Premium", format: (v) => "$" + Math.round(v).toLocaleString() },
-  { id: "points", label: "Points", format: (v) => Math.round(v).toLocaleString() },
+  { id: "aum", label: "AUM", format: (v) => "$" + Math.round(v).toLocaleString() },
 ];
 
 let goalsState = {}; // id -> { current_value, goal_value }
@@ -47,11 +47,11 @@ function renderRings() {
     if (def.id === "premium") {
       // 3-segment arc: DI, Life, LTC — each sized by its share of the total,
       // scaled so the combined arc still represents current/goal overall.
-      const placed = placedSums();
-      const total = placed.di_premium + placed.life_premium + placed.ltc_premium;
-      const propDI = total > 0 ? placed.di_premium / total : 0;
-      const propLife = total > 0 ? placed.life_premium / total : 0;
-      const propLTC = total > 0 ? placed.ltc_premium / total : 0;
+      const eligible = submittedAndBeyondSums();
+      const total = eligible.di_premium + eligible.life_premium + eligible.ltc_premium;
+      const propDI = total > 0 ? eligible.di_premium / total : 0;
+      const propLife = total > 0 ? eligible.life_premium / total : 0;
+      const propLTC = total > 0 ? eligible.ltc_premium / total : 0;
       const lenDI = pct * propDI * circumference;
       const lenLife = pct * propLife * circumference;
       const lenLTC = pct * propLTC * circumference;
@@ -299,10 +299,18 @@ function clientStatusSums(status) {
 }
 function placedSums() { return clientStatusSums("In Force"); }
 
+// The goal circles (Lives, New Clients, Premium, AUM) now count anyone who's
+// reached "Submitted an App" or further — Waiting for Medical, In
+// Underwriting, In Force, or Approved as Other. "Said Yes" and "Fact Finder
+// Complete" are earlier stages and don't count toward these yet.
+function submittedAndBeyondSums() {
+  return clientStatusSumsAny(["Submitted an App", "Waiting for Medical", "In Underwriting", "In Force", "Approved as Other"]);
+}
+
 function renderPremiumSubtotals() {
   const el = document.getElementById("premiumSubtotals");
   if (!el) return;
-  const p = placedSums();
+  const p = submittedAndBeyondSums();
   el.innerHTML = `
     <span><span class="swatch" style="background:#1F6F5C"></span>DI: <b>$${Math.round(p.di_premium).toLocaleString()}</b></span>
     <span><span class="swatch" style="background:#C9A227"></span>Life: <b>$${Math.round(p.life_premium).toLocaleString()}</b></span>
@@ -398,19 +406,19 @@ document.querySelectorAll("[data-override]").forEach((input) => {
   }, 500));
 });
 
-// ---------- Auto-calc goal circles from clients marked "In Force" ----------
+// ---------- Auto-calc goal circles from clients "Submitted an App" and beyond ----------
 async function recalcFromClients() {
-  const placed = placedSums();
-  ["lives", "new_clients", "premium"].forEach((key) => {
+  const eligible = submittedAndBeyondSums();
+  ["lives", "new_clients", "premium", "aum"].forEach((key) => {
     if (!goalsState[key]) goalsState[key] = { current_value: 0, goal_value: 0 };
-    goalsState[key].current_value = placed[key];
+    goalsState[key].current_value = eligible[key];
   });
   renderRings();
   renderConversion();
   renderStatCards();
   if (sb) {
     setSaveState("saving");
-    const rows = ["lives", "new_clients", "premium"].map((key) => {
+    const rows = ["lives", "new_clients", "premium", "aum"].map((key) => {
       const def = GOAL_DEFS.find((d) => d.id === key);
       return {
         id: key, label: def ? def.label : key,
@@ -857,7 +865,7 @@ async function init() {
     }
   }
   // Fill defaults for any goal not yet in Supabase (or when running unconfigured)
-  const defaults = { lives: 75, new_clients: 48, premium: 150000, points: 250000 };
+  const defaults = { lives: 75, new_clients: 48, premium: 150000, aum: 980000 };
   GOAL_DEFS.forEach((def) => {
     if (!goalsState[def.id]) goalsState[def.id] = { current_value: 0, goal_value: defaults[def.id] };
   });
